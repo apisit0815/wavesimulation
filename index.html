@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wave Interference Simulation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+    }
+    canvas {
+      display: block;
+      margin: 20px auto;
+      border: 1px solid #ddd;
+      background: #fff;
+    }
+    h1 {
+      margin: 20px 0;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>Wave Interference Simulation</h1>
+  <canvas id="waveCanvas" width="800" height="400"></canvas>
+
+  <script>
+    // Canvas setup
+    const canvas = document.getElementById("waveCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Wave parameters
+    const amplitude = 50; // Amplitude of the wave
+    const wavelength = 100; // Wavelength in pixels
+    const speed = 2; // Speed of wave propagation
+    const frequency = 0.02; // Frequency of oscillation
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+
+    let time = 0;
+
+    // Function to calculate wave position
+    function drawWave() {
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+      ctx.beginPath();
+
+      // Draw Wave 1
+      ctx.strokeStyle = "blue";
+      for (let x = 0; x < canvasWidth; x++) {
+        const y =
+          amplitude * Math.sin((2 * Math.PI * (x - speed * time)) / wavelength);
+        ctx.lineTo(x, canvasHeight / 2 + y);
+      }
+      ctx.stroke();
+
+      // Draw Wave 2
+      ctx.beginPath();
+      ctx.strokeStyle = "red";
+      for (let x = 0; x < canvasWidth; x++) {
+        const y =
+          amplitude *
+          Math.sin((2 * Math.PI * (x + speed * time)) / wavelength);
+        ctx.lineTo(x, canvasHeight / 2 + y);
+      }
+      ctx.stroke();
+
+      // Draw Interference
+      ctx.beginPath();
+      ctx.strokeStyle = "purple";
+      for (let x = 0; x < canvasWidth; x++) {
+        const y1 =
+          amplitude * Math.sin((2 * Math.PI * (x - speed * time)) / wavelength);
+        const y2 =
+          amplitude * Math.sin((2 * Math.PI * (x + speed * time)) / wavelength);
+        ctx.lineTo(x, canvasHeight / 2 + y1 + y2); // Sum of waves
+      }
+      ctx.stroke();
+
+      time += frequency; // Update time for animation
+      requestAnimationFrame(drawWave); // Animate
+    }
+
+    drawWave(); // Start the simulation
+  </script>
+</body>
+</html>
