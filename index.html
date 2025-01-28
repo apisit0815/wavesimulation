@@ -1,90 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wave Interference Simulation</title>
+  <meta charset="UTF-8" />
+  <title>Pendulum Simulation with UI</title>
   <style>
+    /* จัดสไตล์พื้นฐานให้ Canvas และส่วนควบคุม */
     body {
-      font-family: Arial, sans-serif;
-      text-align: center;
       margin: 0;
       padding: 0;
-      background-color: #f4f4f9;
+      background: #f1f1f1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      box-sizing: border-box;
+    }
+    #controlPanel {
+      margin-bottom: 1rem;
+      background: #ffffff;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    label {
+      margin-right: 0.5rem;
+    }
+    input {
+      width: 60px;
+      margin-right: 1rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
     }
     canvas {
-      display: block;
-      margin: 20px auto;
-      border: 1px solid #ddd;
-      background: #fff;
-    }
-    h1 {
-      margin: 20px 0;
-      color: #333;
+      background: #ffffff;
+      border: 1px solid #ccc;
     }
   </style>
 </head>
 <body>
-  <h1>Wave Interference Simulation</h1>
-  <canvas id="waveCanvas" width="800" height="400"></canvas>
+  <!-- ส่วนควบคุม (Control Panel) สำหรับตั้งค่าเพนดูลัม -->
+  <div id="controlPanel">
+    <label for="angleInput">Angle (deg):</label>
+    <input type="number" id="angleInput" value="30" step="1" />
+
+    <label for="lengthInput">String length (m):</label>
+    <input type="number" id="lengthInput" value="0.3" step="0.1" />
+
+    <button type="button" onclick="updateParams()">Update Pendulum</button>
+  </div>
+
+  <!-- พื้นที่ Canvas สำหรับแสดงเพนดูลัม -->
+  <canvas id="pendulumCanvas" width="600" height="600"></canvas>
 
   <script>
-    // Canvas setup
-    const canvas = document.getElementById("waveCanvas");
+    // -------------------------------
+    // 1. ตัวแปรทางฟิสิกส์หลัก
+    // -------------------------------
+    let g = 9.81;               // ความเร่งโน้มถ่วง (m/s^2)
+    let thetaMaxDeg = 30;       // มุมเหวี่ยงสูงสุด (องศา)
+    let thetaMax = thetaMaxDeg * Math.PI / 180; // แปลงเป็นเรเดียน
+    let L = 0.3;                // ความยาวสาย (เมตร)
+    let omega = Math.sqrt(g / L); // ความถี่เชิงมุม
+
+    // -------------------------------
+    // 2. ตัวแปรเวลาสำหรับอนิเมชัน
+    // -------------------------------
+    let t = 0;
+    const dt = 0.02;             // ระยะห่าง timestep (วินาที)
+
+    // -------------------------------
+    // 3. เตรียม Canvas และบริบทการวาด
+    // -------------------------------
+    const canvas = document.getElementById("pendulumCanvas");
     const ctx = canvas.getContext("2d");
+    const width = canvas.width;
+    const height = canvas.height;
 
-    // Wave parameters
-    const amplitude = 50; // Amplitude of the wave
-    const wavelength = 100; // Wavelength in pixels
-    const speed = 2; // Speed of wave propagation
-    const frequency = 0.02; // Frequency of oscillation
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
+    // กำหนดตำแหน่งหมุด (Pivot) สำหรับเพนดูลัม (ตำแหน่งบน Canvas)
+    const pivotX = width / 2;
+    const pivotY = 100;
 
-    let time = 0;
+    // สเกล: กี่พิกเซลต่อนึงเมตร (ปรับตามต้องการ)
+    const pixelPerMeter = 800;
 
-    // Function to calculate wave position
-    function drawWave() {
-      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    // -------------------------------
+    // 4. ฟังก์ชันวาด (Draw) เพนดูลัม
+    // -------------------------------
+    function draw() {
+      // ล้างหน้าจอทุกครั้งก่อนวาด
+      ctx.clearRect(0, 0, width, height);
+
+      // มุมเพนดูลัม ณ เวลา t (ใช้สมการ small angle: theta(t) = thetaMax*cos(omega*t))
+      const currentTheta = thetaMax * Math.cos(omega * t);
+
+      // ตำแหน่ง (x,y) ของลูกตุ้มคำนวณจาก L*sin(theta) และ L*cos(theta)
+      // (ปรับเป็นค่าบวก / ลบ ตามแกน Canvas)
+      const x = pivotX + (L * Math.sin(currentTheta)) * pixelPerMeter;
+      const y = pivotY + (L * Math.cos(currentTheta)) * pixelPerMeter;
+
+      // วาดจุด Pivot (สีแดง)
       ctx.beginPath();
+      ctx.arc(pivotX, pivotY, 6, 0, 2 * Math.PI);
+      ctx.fillStyle = "red";
+      ctx.fill();
 
-      // Draw Wave 1
-      ctx.strokeStyle = "blue";
-      for (let x = 0; x < canvasWidth; x++) {
-        const y =
-          amplitude * Math.sin((2 * Math.PI * (x - speed * time)) / wavelength);
-        ctx.lineTo(x, canvasHeight / 2 + y);
-      }
+      // วาดสายของเพนดูลัม (เส้นสีดำ)
+      ctx.beginPath();
+      ctx.moveTo(pivotX, pivotY);
+      ctx.lineTo(x, y);
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Draw Wave 2
+      // วาดลูกตุ้ม (วงกลมสีน้ำเงิน)
       ctx.beginPath();
-      ctx.strokeStyle = "red";
-      for (let x = 0; x < canvasWidth; x++) {
-        const y =
-          amplitude *
-          Math.sin((2 * Math.PI * (x + speed * time)) / wavelength);
-        ctx.lineTo(x, canvasHeight / 2 + y);
-      }
-      ctx.stroke();
-
-      // Draw Interference
-      ctx.beginPath();
-      ctx.strokeStyle = "purple";
-      for (let x = 0; x < canvasWidth; x++) {
-        const y1 =
-          amplitude * Math.sin((2 * Math.PI * (x - speed * time)) / wavelength);
-        const y2 =
-          amplitude * Math.sin((2 * Math.PI * (x + speed * time)) / wavelength);
-        ctx.lineTo(x, canvasHeight / 2 + y1 + y2); // Sum of waves
-      }
-      ctx.stroke();
-
-      time += frequency; // Update time for animation
-      requestAnimationFrame(drawWave); // Animate
+      ctx.arc(x, y, 12, 0, 2 * Math.PI);
+      ctx.fillStyle = "royalblue";
+      ctx.fill();
     }
 
-    drawWave(); // Start the simulation
+    // -------------------------------
+    // 5. ฟังก์ชันอัปเดตอนิเมชัน
+    // -------------------------------
+    function animate() {
+      // เพิ่มเวลา dt ทุกเฟรม
+      t += dt;
+
+      // วาดตามตำแหน่งใหม่
+      draw();
+
+      // วนต่อเรื่อย ๆ (60 FPS หรือมากกว่านั้นตามเบราว์เซอร์)
+      requestAnimationFrame(animate);
+    }
+
+    // -------------------------------
+    // 6. ฟังก์ชันอัปเดตค่าพารามิเตอร์จาก UI
+    // -------------------------------
+    function updateParams() {
+      // อ่านค่าจาก input
+      let angleDeg = parseFloat(document.getElementById("angleInput").value);
+      let lengthVal = parseFloat(document.getElementById("lengthInput").value);
+
+      // ตั้งเป็นตัวแปรของเพนดูลัม
+      thetaMaxDeg = angleDeg;
+      thetaMax = thetaMaxDeg * Math.PI / 180;
+      L = lengthVal;
+      omega = Math.sqrt(g / L);
+
+      // รีเซ็ตเวลาให้กลับมาที่จุดเริ่ม
+      t = 0;
+    }
+
+    // -------------------------------
+    // 7. เริ่มต้นอนิเมชัน
+    // -------------------------------
+    // เรียก animate() ครั้งแรกเพื่อให้เข้าลูป
+    animate();
   </script>
 </body>
 </html>
