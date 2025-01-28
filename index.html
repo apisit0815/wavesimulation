@@ -1,164 +1,73 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Pendulum Simulation with UI</title>
-  <style>
-    /* จัดสไตล์พื้นฐานให้ Canvas และส่วนควบคุม */
-    body {
-      margin: 0;
-      padding: 0;
-      background: #f1f1f1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      box-sizing: border-box;
-    }
-    #controlPanel {
-      margin-bottom: 1rem;
-      background: #ffffff;
-      padding: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-    label {
-      margin-right: 0.5rem;
-    }
-    input {
-      width: 60px;
-      margin-right: 1rem;
-    }
-    button {
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-    }
-    canvas {
-      background: #ffffff;
-      border: 1px solid #ccc;
-    }
-  </style>
+    <title>Pendulum Animation</title>
 </head>
 <body>
-  <!-- ส่วนควบคุม (Control Panel) สำหรับตั้งค่าเพนดูลัม -->
-  <div id="controlPanel">
-    <label for="angleInput">Angle (deg):</label>
-    <input type="number" id="angleInput" value="30" step="1" />
+    <canvas id="pendulumCanvas" width="600" height="400"></canvas>
 
-    <label for="lengthInput">String length (m):</label>
-    <input type="number" id="lengthInput" value="0.3" step="0.1" />
+    <script>
+        // Get canvas context
+        const canvas = document.getElementById('pendulumCanvas');
+        const ctx = canvas.getContext('2d');
 
-    <button type="button" onclick="updateParams()">Update Pendulum</button>
-  </div>
+        // Physical parameters
+        const L = 150; // Length of pendulum (pixels)
+        const g = 0.5; // Gravitational constant (pixels/frame²)
+        const thetaMax = Math.PI/6; // 30 degrees in radians
+        let omega = Math.sqrt(g/L); // Angular frequency
+        let time = 0;
 
-  <!-- พื้นที่ Canvas สำหรับแสดงเพนดูลัม -->
-  <canvas id="pendulumCanvas" width="600" height="600"></canvas>
+        // Style parameters
+        const pivotSize = 10;
+        const ballRadius = 20;
+        const lineWidth = 4;
 
-  <script>
-    // -------------------------------
-    // 1. ตัวแปรทางฟิสิกส์หลัก
-    // -------------------------------
-    let g = 9.81;               // ความเร่งโน้มถ่วง (m/s^2)
-    let thetaMaxDeg = 30;       // มุมเหวี่ยงสูงสุด (องศา)
-    let thetaMax = thetaMaxDeg * Math.PI / 180; // แปลงเป็นเรเดียน
-    let L = 0.3;                // ความยาวสาย (เมตร)
-    let omega = Math.sqrt(g / L); // ความถี่เชิงมุม
+        function drawPendulum() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Calculate current angle
+            const angle = thetaMax * Math.cos(omega * time);
+            
+            // Calculate bob position
+            const pivotX = canvas.width/2;
+            const pivotY = canvas.height/4;
+            const ballX = pivotX + L * Math.sin(angle);
+            const ballY = pivotY + L * Math.cos(angle);
 
-    // -------------------------------
-    // 2. ตัวแปรเวลาสำหรับอนิเมชัน
-    // -------------------------------
-    let t = 0;
-    const dt = 0.02;             // ระยะห่าง timestep (วินาที)
+            // Draw pendulum line
+            ctx.beginPath();
+            ctx.moveTo(pivotX, pivotY);
+            ctx.lineTo(ballX, ballY);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
 
-    // -------------------------------
-    // 3. เตรียม Canvas และบริบทการวาด
-    // -------------------------------
-    const canvas = document.getElementById("pendulumCanvas");
-    const ctx = canvas.getContext("2d");
-    const width = canvas.width;
-    const height = canvas.height;
+            // Draw pivot
+            ctx.beginPath();
+            ctx.arc(pivotX, pivotY, pivotSize, 0, 2*Math.PI);
+            ctx.fillStyle = '#ff0000';
+            ctx.fill();
 
-    // กำหนดตำแหน่งหมุด (Pivot) สำหรับเพนดูลัม (ตำแหน่งบน Canvas)
-    const pivotX = width / 2;
-    const pivotY = 100;
+            // Draw ball
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, ballRadius, 0, 2*Math.PI);
+            ctx.fillStyle = '#4169E1';
+            ctx.fill();
+            
+            // Update time
+            time += 1;
+        }
 
-    // สเกล: กี่พิกเซลต่อนึงเมตร (ปรับตามต้องการ)
-    const pixelPerMeter = 800;
+        // Animation loop
+        function animate() {
+            drawPendulum();
+            requestAnimationFrame(animate);
+        }
 
-    // -------------------------------
-    // 4. ฟังก์ชันวาด (Draw) เพนดูลัม
-    // -------------------------------
-    function draw() {
-      // ล้างหน้าจอทุกครั้งก่อนวาด
-      ctx.clearRect(0, 0, width, height);
-
-      // มุมเพนดูลัม ณ เวลา t (ใช้สมการ small angle: theta(t) = thetaMax*cos(omega*t))
-      const currentTheta = thetaMax * Math.cos(omega * t);
-
-      // ตำแหน่ง (x,y) ของลูกตุ้มคำนวณจาก L*sin(theta) และ L*cos(theta)
-      // (ปรับเป็นค่าบวก / ลบ ตามแกน Canvas)
-      const x = pivotX + (L * Math.sin(currentTheta)) * pixelPerMeter;
-      const y = pivotY + (L * Math.cos(currentTheta)) * pixelPerMeter;
-
-      // วาดจุด Pivot (สีแดง)
-      ctx.beginPath();
-      ctx.arc(pivotX, pivotY, 6, 0, 2 * Math.PI);
-      ctx.fillStyle = "red";
-      ctx.fill();
-
-      // วาดสายของเพนดูลัม (เส้นสีดำ)
-      ctx.beginPath();
-      ctx.moveTo(pivotX, pivotY);
-      ctx.lineTo(x, y);
-      ctx.strokeStyle = "black";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // วาดลูกตุ้ม (วงกลมสีน้ำเงิน)
-      ctx.beginPath();
-      ctx.arc(x, y, 12, 0, 2 * Math.PI);
-      ctx.fillStyle = "royalblue";
-      ctx.fill();
-    }
-
-    // -------------------------------
-    // 5. ฟังก์ชันอัปเดตอนิเมชัน
-    // -------------------------------
-    function animate() {
-      // เพิ่มเวลา dt ทุกเฟรม
-      t += dt;
-
-      // วาดตามตำแหน่งใหม่
-      draw();
-
-      // วนต่อเรื่อย ๆ (60 FPS หรือมากกว่านั้นตามเบราว์เซอร์)
-      requestAnimationFrame(animate);
-    }
-
-    // -------------------------------
-    // 6. ฟังก์ชันอัปเดตค่าพารามิเตอร์จาก UI
-    // -------------------------------
-    function updateParams() {
-      // อ่านค่าจาก input
-      let angleDeg = parseFloat(document.getElementById("angleInput").value);
-      let lengthVal = parseFloat(document.getElementById("lengthInput").value);
-
-      // ตั้งเป็นตัวแปรของเพนดูลัม
-      thetaMaxDeg = angleDeg;
-      thetaMax = thetaMaxDeg * Math.PI / 180;
-      L = lengthVal;
-      omega = Math.sqrt(g / L);
-
-      // รีเซ็ตเวลาให้กลับมาที่จุดเริ่ม
-      t = 0;
-    }
-
-    // -------------------------------
-    // 7. เริ่มต้นอนิเมชัน
-    // -------------------------------
-    // เรียก animate() ครั้งแรกเพื่อให้เข้าลูป
-    animate();
-  </script>
+        // Start animation
+        animate();
+    </script>
 </body>
 </html>
