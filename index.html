@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>แบบจำลองคลื่นเสียงแสดงความถี่และความยาวคลื่น</title>
+    <title>Sound Wave Generator</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -97,6 +97,15 @@
             frequencyValue.textContent = frequency.toFixed(1);
             wavelengthValue.textContent = wavelength.toFixed(1);
         });
+
+        // Animation loop
+        function animate() {
+            updateWave();
+            requestAnimationFrame(animate);
+        }
+
+        // Start animation
+        animate();
     </script>
 </body>
 </html>
