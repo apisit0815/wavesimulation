@@ -1,42 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Pendulum Animation</title>
+    <title>Adjustable Pendulum</title>
+    <style>
+        .control-panel {
+            margin: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        .slider-container {
+            margin: 10px 0;
+        }
+    </style>
 </head>
 <body>
+    <div class="control-panel">
+        <div class="slider-container">
+            <label>ความยาวเชือก: <span id="lengthValue">150</span> pixels</label><br>
+            <input type="range" id="lengthSlider" min="50" max="300" value="150">
+        </div>
+    </div>
     <canvas id="pendulumCanvas" width="600" height="400"></canvas>
 
     <script>
-        // Get canvas context
         const canvas = document.getElementById('pendulumCanvas');
         const ctx = canvas.getContext('2d');
+        const lengthSlider = document.getElementById('lengthSlider');
+        const lengthValue = document.getElementById('lengthValue');
 
-        // Physical parameters
-        const L = 150; // Length of pendulum (pixels)
-        const g = 0.5; // Gravitational constant (pixels/frame²)
-        const thetaMax = Math.PI/6; // 30 degrees in radians
-        let omega = Math.sqrt(g/L); // Angular frequency
+        // ตัวแปรปรับแต่งได้
+        let L = 150; // ความยาวเริ่มต้น (พิกเซล)
+        let g = 0.5;
+        let thetaMax = Math.PI/6;
+        let omega = Math.sqrt(g/L);
         let time = 0;
 
-        // Style parameters
+        // การตั้งค่า style
         const pivotSize = 10;
         const ballRadius = 20;
         const lineWidth = 4;
 
+        // อัปเดตค่าความยาวเมื่อเลื่อนสไลด์
+        lengthSlider.addEventListener('input', (e) => {
+            L = parseInt(e.target.value);
+            lengthValue.textContent = L;
+            omega = Math.sqrt(g/L);
+        });
+
         function drawPendulum() {
-            // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Calculate current angle
             const angle = thetaMax * Math.cos(omega * time);
-            
-            // Calculate bob position
             const pivotX = canvas.width/2;
             const pivotY = canvas.height/4;
             const ballX = pivotX + L * Math.sin(angle);
             const ballY = pivotY + L * Math.cos(angle);
 
-            // Draw pendulum line
+            // วาดเส้นเชือก
             ctx.beginPath();
             ctx.moveTo(pivotX, pivotY);
             ctx.lineTo(ballX, ballY);
@@ -44,29 +64,26 @@
             ctx.lineWidth = lineWidth;
             ctx.stroke();
 
-            // Draw pivot
+            // วาดจุดหมุน
             ctx.beginPath();
             ctx.arc(pivotX, pivotY, pivotSize, 0, 2*Math.PI);
             ctx.fillStyle = '#ff0000';
             ctx.fill();
 
-            // Draw ball
+            // วาดลูกตุ้ม
             ctx.beginPath();
             ctx.arc(ballX, ballY, ballRadius, 0, 2*Math.PI);
             ctx.fillStyle = '#4169E1';
             ctx.fill();
             
-            // Update time
-            time += 1;
+            time += 0.5;
         }
 
-        // Animation loop
         function animate() {
             drawPendulum();
             requestAnimationFrame(animate);
         }
 
-        // Start animation
         animate();
     </script>
 </body>
