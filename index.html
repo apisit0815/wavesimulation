@@ -1,89 +1,110 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Adjustable Pendulum</title>
+    <title>Sound Wave Generator</title>
     <style>
-        .control-panel {
-            margin: 20px;
-            padding: 10px;
-            border: 1px solid #ccc;
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
         }
-        .slider-container {
-            margin: 10px 0;
+        .control-group {
+            margin: 20px 0;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="control-panel">
-        <div class="slider-container">
-            <label>ความยาวเชือก: <span id="lengthValue">150</span> pixels</label><br>
-            <input type="range" id="lengthSlider" min="50" max="300" value="150">
-        </div>
+    <h1>Sound Wave Generator</h1>
+    
+    <div class="control-group">
+        <label for="frequency">Frequency (Hz): </label>
+        <input type="range" id="frequency" min="1" max="100" step="0.1" value="1">
+        <span id="frequencyValue">1.0</span>
     </div>
-    <canvas id="pendulumCanvas" width="600" height="400"></canvas>
+    
+    <div class="control-group">
+        <label for="wavelength">Wavelength (m): </label>
+        <input type="range" id="wavelength" min="1" max="100" step="0.1" value="100">
+        <span id="wavelengthValue">100.0</span>
+    </div>
+
+    <canvas id="waveCanvas" width="800" height="200"></canvas>
 
     <script>
-        const canvas = document.getElementById('pendulumCanvas');
+        const canvas = document.getElementById('waveCanvas');
         const ctx = canvas.getContext('2d');
-        const lengthSlider = document.getElementById('lengthSlider');
-        const lengthValue = document.getElementById('lengthValue');
+        const speedOfSound = 100; // Arbitrary constant for visualization
 
-        // ตัวแปรปรับแต่งได้
-        let L = 150; // ความยาวเริ่มต้น (พิกเซล)
-        let g = 0.5;
-        let thetaMax = Math.PI/6;
-        let omega = Math.sqrt(g/L);
-        let time = 0;
+        // Get DOM elements
+        const frequencySlider = document.getElementById('frequency');
+        const wavelengthSlider = document.getElementById('wavelength');
+        const frequencyValue = document.getElementById('frequencyValue');
+        const wavelengthValue = document.getElementById('wavelengthValue');
 
-        // การตั้งค่า style
-        const pivotSize = 10;
-        const ballRadius = 20;
-        const lineWidth = 4;
+        // Initial values
+        let frequency = parseFloat(frequencySlider.value);
+        let wavelength = parseFloat(wavelengthSlider.value);
 
-        // อัปเดตค่าความยาวเมื่อเลื่อนสไลด์
-        lengthSlider.addEventListener('input', (e) => {
-            L = parseInt(e.target.value);
-            lengthValue.textContent = L;
-            omega = Math.sqrt(g/L);
-        });
-
-        function drawPendulum() {
+        function updateWave() {
+            // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            const angle = thetaMax * Math.cos(omega * time);
-            const pivotX = canvas.width/2;
-            const pivotY = canvas.height/4;
-            const ballX = pivotX + L * Math.sin(angle);
-            const ballY = pivotY + L * Math.cos(angle);
-
-            // วาดเส้นเชือก
+            // Draw horizontal axis
             ctx.beginPath();
-            ctx.moveTo(pivotX, pivotY);
-            ctx.lineTo(ballX, ballY);
+            ctx.moveTo(0, canvas.height/2);
+            ctx.lineTo(canvas.width, canvas.height/2);
             ctx.strokeStyle = '#000';
-            ctx.lineWidth = lineWidth;
             ctx.stroke();
 
-            // วาดจุดหมุน
+            // Draw wave
             ctx.beginPath();
-            ctx.arc(pivotX, pivotY, pivotSize, 0, 2*Math.PI);
-            ctx.fillStyle = '#ff0000';
-            ctx.fill();
-
-            // วาดลูกตุ้ม
-            ctx.beginPath();
-            ctx.arc(ballX, ballY, ballRadius, 0, 2*Math.PI);
-            ctx.fillStyle = '#4169E1';
-            ctx.fill();
+            ctx.moveTo(0, canvas.height/2);
+            const amplitude = 50; // Wave height in pixels
             
-            time += 0.5;
+            for(let x = 0; x <= canvas.width; x += 2) {
+                // Calculate y position using sine function
+                const y = canvas.height/2 + amplitude * Math.sin(
+                    (2 * Math.PI * x) / wavelength - // Spatial component
+                    (2 * Math.PI * frequency * Date.now() / 1000) // Temporal component
+                );
+                
+                ctx.lineTo(x, y);
+            }
+
+            ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 2;
+            ctx.stroke();
         }
 
+        // Event listeners for sliders
+        frequencySlider.addEventListener('input', (e) => {
+            frequency = parseFloat(e.target.value);
+            wavelength = speedOfSound / frequency;
+            wavelengthSlider.value = wavelength.toFixed(1);
+            frequencyValue.textContent = frequency.toFixed(1);
+            wavelengthValue.textContent = wavelength.toFixed(1);
+        });
+
+        wavelengthSlider.addEventListener('input', (e) => {
+            wavelength = parseFloat(e.target.value);
+            frequency = speedOfSound / wavelength;
+            frequencySlider.value = frequency.toFixed(1);
+            frequencyValue.textContent = frequency.toFixed(1);
+            wavelengthValue.textContent = wavelength.toFixed(1);
+        });
+
+        // Animation loop
         function animate() {
-            drawPendulum();
+            updateWave();
             requestAnimationFrame(animate);
         }
 
+        // Start animation
         animate();
     </script>
 </body>
