@@ -16,21 +16,34 @@
             border: 1px solid #ccc;
             margin-top: 20px;
         }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
     <h1>Sound Wave Generator</h1>
     
+    <button id="playButton">Play Sound</button>
+    
     <div class="control-group">
         <label for="frequency">Frequency (Hz): </label>
-        <input type="range" id="frequency" min="1" max="100" step="0.1" value="1">
-        <span id="frequencyValue">1.0</span>
+        <input type="range" id="frequency" min="20" max="2000" step="1" value="440">
+        <span id="frequencyValue">440</span>
     </div>
     
     <div class="control-group">
         <label for="wavelength">Wavelength (m): </label>
-        <input type="range" id="wavelength" min="1" max="100" step="0.1" value="100">
-        <span id="wavelengthValue">100.0</span>
+        <input type="range" id="wavelength" min="0.1" max="17.15" step="0.01" value="0.78">
+        <span id="wavelengthValue">0.78</span>
+    </div>
+
+    <div class="control-group">
+        <label for="amplitude">Amplitude: </label>
+        <input type="range" id="amplitude" min="0" max="100" step="1" value="50">
+        <span id="amplitudeValue">50</span>
     </div>
 
     <canvas id="waveCanvas" width="800" height="200"></canvas>
@@ -38,20 +51,29 @@
     <script>
         const canvas = document.getElementById('waveCanvas');
         const ctx = canvas.getContext('2d');
-        const speedOfSound = 100; // Arbitrary constant for visualization
+        const speedOfSound = 343; // Speed of sound in air at 20°C (m/s)
+
+        // Audio context elements
+        let audioContext;
+        let oscillator;
+        let gainNode;
+        let isPlaying = false;
 
         // Get DOM elements
+        const playButton = document.getElementById('playButton');
         const frequencySlider = document.getElementById('frequency');
         const wavelengthSlider = document.getElementById('wavelength');
+        const amplitudeSlider = document.getElementById('amplitude');
         const frequencyValue = document.getElementById('frequencyValue');
         const wavelengthValue = document.getElementById('wavelengthValue');
+        const amplitudeValue = document.getElementById('amplitudeValue');
 
         // Initial values
         let frequency = parseFloat(frequencySlider.value);
         let wavelength = parseFloat(wavelengthSlider.value);
+        let amplitude = parseFloat(amplitudeSlider.value);
 
         function updateWave() {
-            // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             // Draw horizontal axis
@@ -64,15 +86,12 @@
             // Draw wave
             ctx.beginPath();
             ctx.moveTo(0, canvas.height/2);
-            const amplitude = 50; // Wave height in pixels
             
             for(let x = 0; x <= canvas.width; x += 2) {
-                // Calculate y position using sine function
                 const y = canvas.height/2 + amplitude * Math.sin(
-                    (2 * Math.PI * x) / wavelength - // Spatial component
-                    (2 * Math.PI * frequency * Date.now() / 1000) // Temporal component
+                    (2 * Math.PI * x) / (canvas.width / (canvas.width/wavelength)) - 
+                    (2 * Math.PI * frequency * Date.now() / 1000)
                 );
-                
                 ctx.lineTo(x, y);
             }
 
@@ -81,13 +100,49 @@
             ctx.stroke();
         }
 
-        // Event listeners for sliders
+        // Audio control functions
+        function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            gainNode = audioContext.createGain();
+            oscillator = audioContext.createOscillator();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(amplitude/100, audioContext.currentTime);
+            
+            oscillator.start();
+            isPlaying = true;
+            playButton.textContent = 'Stop Sound';
+        }
+
+        function stopAudio() {
+            oscillator.stop();
+            isPlaying = false;
+            playButton.textContent = 'Play Sound';
+        }
+
+        // Event listeners
+        playButton.addEventListener('click', () => {
+            if (!isPlaying) {
+                initAudio();
+            } else {
+                stopAudio();
+            }
+        });
+
         frequencySlider.addEventListener('input', (e) => {
             frequency = parseFloat(e.target.value);
             wavelength = speedOfSound / frequency;
-            wavelengthSlider.value = wavelength.toFixed(1);
-            frequencyValue.textContent = frequency.toFixed(1);
-            wavelengthValue.textContent = wavelength.toFixed(1);
+            wavelengthSlider.value = wavelength.toFixed(2);
+            frequencyValue.textContent = frequency;
+            wavelengthValue.textContent = wavelength.toFixed(2);
+            
+            if (oscillator) {
+                oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            }
         });
 
         wavelengthSlider.addEventListener('input', (e) => {
@@ -95,7 +150,20 @@
             frequency = speedOfSound / wavelength;
             frequencySlider.value = frequency.toFixed(1);
             frequencyValue.textContent = frequency.toFixed(1);
-            wavelengthValue.textContent = wavelength.toFixed(1);
+            wavelengthValue.textContent = wavelength.toFixed(2);
+            
+            if (oscillator) {
+                oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            }
+        });
+
+        amplitudeSlider.addEventListener('input', (e) => {
+            amplitude = parseFloat(e.target.value);
+            amplitudeValue.textContent = amplitude;
+            
+            if (gainNode) {
+                gainNode.gain.setValueAtTime(amplitude/100, audioContext.currentTime);
+            }
         });
 
         // Animation loop
@@ -104,7 +172,6 @@
             requestAnimationFrame(animate);
         }
 
-        // Start animation
         animate();
     </script>
 </body>
